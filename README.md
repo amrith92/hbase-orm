@@ -3,7 +3,7 @@
 [![Build Status](https://api.travis-ci.org/flipkart-incubator/hbase-orm.svg?branch=master&status=passed)](https://travis-ci.org/github/flipkart-incubator/hbase-orm)
 [![Language grade: Java](https://img.shields.io/lgtm/grade/java/g/flipkart-incubator/hbase-orm.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/flipkart-incubator/hbase-orm/context:java)
 [![Coverage Status](https://coveralls.io/repos/github/flipkart-incubator/hbase-orm/badge.svg?branch=master)](https://coveralls.io/github/flipkart-incubator/hbase-orm?branch=master)
-[![Maven Central](https://img.shields.io/badge/sonatype-1.16-orange.svg)](https://oss.sonatype.org/content/repositories/releases/com/flipkart/hbase-object-mapper/1.16/)
+[![Maven Central](https://img.shields.io/badge/sonatype-1.17-blue.svg)](https://oss.sonatype.org/content/repositories/releases/com/flipkart/hbase-object-mapper/1.17/)
 [![License](https://img.shields.io/badge/License-Apache%202-blue.svg)](./LICENSE.txt)
 
 ## Introduction
@@ -425,7 +425,7 @@ Add below entry within the `dependencies` section of your `pom.xml`:
 <dependency>
   <groupId>com.flipkart</groupId>
   <artifactId>hbase-object-mapper</artifactId>
-  <version>1.16</version>
+  <version>1.17</version>
 </dependency>
 ```
 
@@ -436,7 +436,7 @@ See artifact details: [com.flipkart:hbase-object-mapper on **Maven Central**](ht
 To build this project, follow below simple steps:
 
  1. Do a `git clone` of this repository
- 2. Checkout latest stable version `git checkout v1.16`
+ 2. Checkout latest stable version `git checkout v1.17`
  3. Execute `mvn clean install` from shell
 
 ### Please note:

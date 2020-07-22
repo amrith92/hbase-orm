@@ -171,8 +171,7 @@ public class HBObjectMapper {
             WrappedHBColumn hbColumn = new WrappedHBColumn(field);
             if (hbColumn.isPresent()) {
                 if (!hbTable.isColumnFamilyPresent(hbColumn.family())) {
-                    throw new IllegalArgumentException(String.format("Class %s has field '%s' mapped to HBase column '%s' - but column family '%s' isn't configured in @%s annotation",
-                            clazz.getName(), field.getName(), hbColumn, hbColumn.family(), HBTable.class.getSimpleName()));
+                    throw new ColumnFamilyNotInHBTableException(clazz.getName(), field.getName(), hbColumn.family(), hbColumn.column());
                 }
                 if (hbColumn.isSingleVersioned()) {
                     validateHBColumnSingleVersionField(field);
@@ -543,26 +542,6 @@ public class HBObjectMapper {
             return readValueFromPut(put, clazz);
         else
             return readValueFromRowAndPut(rowKey.get(), put, clazz);
-    }
-
-
-    /**
-     * A variant of {@link #readValue(ImmutableBytesWritable, Put, Class)} method
-     *
-     * @param rowKey Row key of the record that corresponds to {@link Put}. If this is <code>null</code>, an attempt will be made to resolve it from {@link Put} object
-     * @param put    HBase's {@link Put} object
-     * @param clazz  {@link Class} to which you want to convert to (must implement {@link HBRecord} interface)
-     * @param <R>    Data type of row key
-     * @param <T>    Entity type
-     * @return Object of bean-like class
-     * @throws CodecException One or more column values is a <code>byte[]</code> that couldn't be deserialized into field type (as defined in your entity class)
-     */
-    <R extends Serializable & Comparable<R>, T extends HBRecord<R>> T readValue(R rowKey, Put put, Class<T> clazz) {
-        if (rowKey == null) {
-            return readValueFromPut(put, clazz);
-        } else {
-            return readValueFromRowAndPut(rowKeyToBytes(rowKey, WrappedHBTable.getCodecFlags(clazz)), put, clazz);
-        }
     }
 
     private <R extends Serializable & Comparable<R>, T extends HBRecord<R>> T readValueFromRowAndPut(byte[] rowKeyBytes, Put put, Class<T> clazz) {

@@ -2,7 +2,7 @@ package com.flipkart.hbaseobjectmapper.testcases.entities;
 
 import com.flipkart.hbaseobjectmapper.*;
 
-@HBTable(name = "blah")
+@HBTable(name = "blah", families = {@Family(name = "f1")})
 public class ClassWithDuplicateCodecFlagsForColumn implements HBRecord<String> {
 
     private String key;

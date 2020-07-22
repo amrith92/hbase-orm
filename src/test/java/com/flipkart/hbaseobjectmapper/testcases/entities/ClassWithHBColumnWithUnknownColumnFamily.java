@@ -2,16 +2,16 @@ package com.flipkart.hbaseobjectmapper.testcases.entities;
 
 import com.flipkart.hbaseobjectmapper.*;
 
-@HBTable(name = "blah")
-public class ClassWithFieldNotMappedToHBColumn implements HBRecord<String> {
+@HBTable(name = "blah", families = {@Family(name = "f2")})
+public class ClassWithHBColumnWithUnknownColumnFamily implements HBRecord<String> {
 
     private String key;
 
     @HBColumn(family = "f1", column = "c1")
-    private Float f1;
+    private Float c1;
 
     @HBColumn(family = "f1", column = "c1")
-    private Double f2;
+    private Double c2;
 
     @Override
     public String composeRowKey() {

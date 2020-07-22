@@ -2,7 +2,7 @@ package com.flipkart.hbaseobjectmapper.testcases.entities;
 
 import com.flipkart.hbaseobjectmapper.*;
 
-@HBTable(name = "blah", rowKeyCodecFlags = {
+@HBTable(name = "blah", families = {@Family(name = "f1")}, rowKeyCodecFlags = {
         @Flag(name = "flag1", value = "flagValue1"),
         @Flag(name = "flag1", value = "flagValue2")
 })

@@ -398,8 +398,9 @@ public class HBObjectMapper {
             for (Map.Entry<byte[], NavigableMap<Long, byte[]>> e : fe.getValue().entrySet()) {
                 byte[] columnName = e.getKey();
                 NavigableMap<Long, byte[]> valuesVersioned = e.getValue();
-                if (valuesVersioned == null)
+                if (valuesVersioned == null) {
                     continue;
+                }
                 for (Map.Entry<Long, byte[]> columnVersion : valuesVersioned.entrySet()) {
                     CellBuilder cellBuilder = CellBuilderFactory.create(CellBuilderType.DEEP_COPY);
                     cellBuilder.setType(Cell.Type.Put).setRow(row).setFamily(family).setQualifier(columnName).setTimestamp(columnVersion.getKey()).setValue(columnVersion.getValue());

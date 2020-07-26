@@ -5,8 +5,9 @@
     <name>HBase ORM</name>
     <description>
         HBase ORM is a light-weight, thread-safe and performant library that enables:
-        [1] object-oriented access of HBase rows (Data Access Object) with minimal code and good testability
-        [2] reading from and/or writing to HBase tables in Hadoop MapReduce jobs
+        [1] object-oriented access of HBase rows (Data Access Object) with minimal code and good testability.
+        [2] reading from and/or writing to HBase tables in Hadoop MapReduce jobs.
+        This library can also be used as a Bigtable ORM library.
     </description>
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.flipkart</groupId>

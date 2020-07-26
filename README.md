@@ -9,10 +9,10 @@
 ## Introduction
 HBase ORM is a light-weight, thread-safe and performant library that enables:
 
-1. object-oriented access of HBase rows (Data Access Object) with minimal code and good testability
-2. reading from and/or writing to HBase tables in Hadoop MapReduce jobs
+1. object-oriented access of HBase rows (Data Access Object) with minimal code and good testability.
+2. reading from and/or writing to HBase tables in Hadoop MapReduce jobs.
 
-This library can also be used as a [Bigtable ORM](#bigtable-orm) library.
+This library can also be used as a [Bigtable ORM](#bigtable-orm) library. Scroll down to relevant section to know how.
 
 ## Usage
 Let's say you've an HBase table `citizens` with row-key format of `country_code#UID`. Now, let's say this table is created with three column families `main`, `optional` and `tracked`, which may have columns (qualifiers) `uid`, `name`, `salary` etc.
@@ -152,7 +152,11 @@ Once defined, you can instantiate your *data access object* as below:
 ```java
 CitizenDAO citizenDao = new CitizenDAO(connection);
 ```
-You can access, manipulate and persist records of `citizens` table as shown in below examples:
+**Side note**: As you'd know, HBase's `Connection` creation is a heavy-weight operation
+(Details: [Connection](https://hbase.apache.org/2.0/apidocs/org/apache/hadoop/hbase/client/Connection.html)).
+So, it is recommended that you create `Connection` instance once and use it for the entire life cycle of your program across all the DAO classes that you create (such as above).
+
+Now, you can access, manipulate and persist records of `citizens` table as shown in below examples:
 
 Create new record:
 
@@ -294,7 +298,7 @@ citizenDao.getHBaseTable() // returns HTable instance (in case you want to direc
 
 (see [TestsAbstractHBDAO.java](./src/test/java/com/flipkart/hbaseobjectmapper/testcases/TestsAbstractHBDAO.java) for more detailed examples)
 
-**Please note:** Since we're dealing with HBase (and not a classical RDBMS), fitting a Hibernate-like ORM may not make sense. So, this library doesn't intend to evolve as a full-fledged ORM. However, if that's your intent, I suggest you use [Apache Phoenix](https://phoenix.apache.org/).
+**Please note:** Since we're dealing with HBase (and not a classical RDBMS), fitting a Hibernate-like ORM may not make sense. So, this library does **not** intend to evolve as a full-fledged ORM. However, if that's your intent, I suggest you use [Apache Phoenix](https://phoenix.apache.org/).
 
 
 ## Using this library for DDL operations
@@ -466,10 +470,18 @@ If you intend to request a feature or report a bug, you may use [Github Issues f
 ## Bigtable ORM
 Google's [Cloud Bigtable](https://cloud.google.com/bigtable) provides first-class support for [accessing Bigtable using HBase client](https://cloud.google.com/bigtable/docs/reference/libraries#client-libraries-usage-hbase-java).
 
-This library can be used as a **Bigtable ORM**. Add following to your dependencies:
-
-1. [bigtable-hbase-2.x](https://mvnrepository.com/artifact/com.google.cloud.bigtable/bigtable-hbase-2.x) or [bigtable-hbase-2.x-shaded](https://mvnrepository.com/artifact/com.google.cloud.bigtable/bigtable-hbase-2.x-shaded)
-2. This library
+This library can be used as a **Bigtable ORM**, 3 simple steps:
+1. Add following to your dependencies:
+    * [bigtable-hbase-2.x](https://mvnrepository.com/artifact/com.google.cloud.bigtable/bigtable-hbase-2.x) or [bigtable-hbase-2.x-shaded](https://mvnrepository.com/artifact/com.google.cloud.bigtable/bigtable-hbase-2.x-shaded)
+    * This library
+2. Instantiate `Connection` class as below:
+    ```java
+    import com.google.cloud.bigtable.hbase.BigtableConfiguration;
+    // some code
+    Connection connection = BigtableConfiguration.connect(projectId, instanceId);
+    // some code
+    ``` 
+3. Use the `Connection` instance as mentioned earlier
 
 ## License
 

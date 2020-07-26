@@ -114,7 +114,7 @@ public abstract class AbstractHBDAO<R extends Serializable & Comparable<R>, T ex
      * @throws IllegalStateException Annotation(s) on base entity may be incorrect
      */
     protected AbstractHBDAO(Connection connection) {
-        this(connection, (Codec) null);
+        this(connection, HBObjectMapperFactory.construct());
     }
 
     /**
@@ -125,7 +125,7 @@ public abstract class AbstractHBDAO<R extends Serializable & Comparable<R>, T ex
      * @throws IllegalStateException Annotation(s) on base entity may be incorrect
      */
     protected AbstractHBDAO(Configuration configuration) throws IOException {
-        this(configuration, (Codec) null);
+        this(configuration, HBObjectMapperFactory.construct());
     }
 
     /**
@@ -554,11 +554,11 @@ public abstract class AbstractHBDAO<R extends Serializable & Comparable<R>, T ex
         for (Map.Entry<String, Object> e : valuesToAppend.entrySet()) {
             String fieldName = e.getKey();
             Field field = getField(fieldName);
-            WrappedHBColumn hbColumn = new WrappedHBColumn(field);
             Object value = e.getValue();
             if (!field.getType().isAssignableFrom(value.getClass())) {
                 throw new IllegalArgumentException(String.format("An attempt was made to append a value of type '%s' to field '%s', which is of type '%s' (incompatible)", value.getClass(), fieldName, field.getType()));
             }
+            WrappedHBColumn hbColumn = new WrappedHBColumn(field);
             append.addColumn(hbColumn.familyBytes(), hbColumn.columnBytes(),
                     hbObjectMapper.valueToByteArray((Serializable) value, hbColumn.codecFlags())
             );

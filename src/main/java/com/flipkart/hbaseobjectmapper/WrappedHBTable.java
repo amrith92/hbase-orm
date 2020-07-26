@@ -80,7 +80,7 @@ class WrappedHBTable<R extends Serializable & Comparable<R>, T extends HBRecord<
 
     @Override
     public String toString() {
-        return tableName.getNameAsString();
+        return String.format("%s:%s", tableName.getNamespaceAsString(), tableName.getNameAsString());
     }
 
     static <R extends Serializable & Comparable<R>, T extends HBRecord<R>> Map<String, String> getCodecFlags(Class<T> clazz) {

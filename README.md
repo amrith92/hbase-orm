@@ -3,7 +3,7 @@
 [![Build Status](https://api.travis-ci.org/flipkart-incubator/hbase-orm.svg?branch=master&status=passed)](https://travis-ci.org/github/flipkart-incubator/hbase-orm)
 [![Language grade: Java](https://img.shields.io/lgtm/grade/java/g/flipkart-incubator/hbase-orm.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/flipkart-incubator/hbase-orm/context:java)
 [![Coverage Status](https://coveralls.io/repos/github/flipkart-incubator/hbase-orm/badge.svg?branch=master)](https://coveralls.io/github/flipkart-incubator/hbase-orm?branch=master)
-[![Maven Central](https://img.shields.io/badge/sonatype-1.17-blue.svg)](https://oss.sonatype.org/content/repositories/releases/com/flipkart/hbase-object-mapper/1.17/)
+[![Maven Central](https://img.shields.io/badge/sonatype-1.18-blue.svg)](https://oss.sonatype.org/content/repositories/releases/com/flipkart/hbase-object-mapper/1.18/)
 [![License](https://img.shields.io/badge/License-Apache%202-blue.svg)](./LICENSE.txt)
 
 ## Introduction
@@ -433,25 +433,25 @@ If you are using Maven, add below entry within the `dependencies` section of you
 <dependency>
   <groupId>com.flipkart</groupId>
   <artifactId>hbase-object-mapper</artifactId>
-  <version>1.17</version>
+  <version>1.18</version>
 </dependency>
 ```
 
 See artifact details: [com.flipkart:hbase-object-mapper on **Maven Central**](https://search.maven.org/search?q=g:com.flipkart%20AND%20a:hbase-object-mapper&core=gav).
 
 If you're using Gradle or Ivy or SBT, see how to include this library in your build:
-[com.flipkart:hbase-object-mapper:1.17](https://mvnrepository.com/artifact/com.flipkart/hbase-object-mapper/1.17).
+[com.flipkart:hbase-object-mapper:1.18](https://mvnrepository.com/artifact/com.flipkart/hbase-object-mapper/1.18).
 
 ## How to build?
 To build this project, follow below simple steps:
 
  1. Do a `git clone` of this repository
- 2. Checkout latest stable version `git checkout v1.17`
+ 2. Checkout latest stable version `git checkout v1.18`
  3. Execute `mvn clean install` from shell
 
 ### Please note:
 
- * Currently, projects that use this library are running on [Hortonworks Data Platform v3.1](https://docs.cloudera.com/HDPDocuments/HDP3/HDP-3.1.0/index.html) (corresponds to Hadoop 3.1 and HBase 2.0). However, if you are using a different version of Hadoop/HBase, you may change the versions in [pom.xml](./pom.xml) to desired ones and build the project.
+ * Currently, systems that use this library are running on Hadoop 3.1 and HBase 2.0. However, if you are using a different version of Hadoop/HBase, you may change the versions in [pom.xml](./pom.xml) to desired ones and build the project.
  * Test cases are **very comprehensive**. So, `mvn` build times can sometimes be longer, depending on your machine configuration.
  * By default, test cases spin an [in-memory HBase test cluster](https://github.com/apache/hbase/blob/master/hbase-server/src/test/java/org/apache/hadoop/hbase/HBaseTestingUtility.java) to run data access related test cases (near-realworld scenario). 
     * If test cases are failing with time out errors, you may increase the timeout by setting environment variable `INMEMORY_CLUSTER_START_TIMEOUT` (seconds). For example, on Linux you may run the command `export INMEMORY_CLUSTER_START_TIMEOUT=8` on terminal, before running the aforementioned `mvn` command.

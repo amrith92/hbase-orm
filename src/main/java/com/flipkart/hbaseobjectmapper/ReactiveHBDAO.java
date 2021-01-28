@@ -4,6 +4,7 @@ import com.flipkart.hbaseobjectmapper.codec.Codec;
 import com.flipkart.hbaseobjectmapper.exceptions.InvalidReadVersionsCountException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.client.AdvancedScanResultConsumer;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.AsyncConnection;
@@ -505,6 +506,25 @@ public abstract class ReactiveHBDAO<R extends Serializable & Comparable<R>, T ex
         return getHBaseTable()
                 .put(put)
                 .thenApply(nothing -> record.composeRowKey());
+    }
+
+    /**
+     * Persist your bean-like object only when the specified field carries the exact
+     * value specified in the bean in HBase.
+     *
+     * @param record Object that needs to be persisted
+     * @param fieldName Field name that must be equal
+     * @return true when the field value was equal &amp; object was persisted, false otherwise
+     */
+    public CompletableFuture<Boolean> persistWhenFieldEquals(final T record, final String fieldName) {
+        final Put put = hbObjectMapper.writeValueAsPut0(record);
+        final Field field = getField(fieldName);
+        final WrappedHBColumn hbColumn = new WrappedHBColumn(field);
+        return getHBaseTable()
+                .checkAndMutate(put.getRow(), hbColumn.familyBytes())
+                .qualifier(hbColumn.columnBytes())
+                .ifEquals(CellUtil.cloneValue(put.get(hbColumn.familyBytes(), hbColumn.columnBytes()).get(0)))
+                .thenPut(put);
     }
 
     /**

@@ -211,8 +211,8 @@ class TestsReactiveHBDAO extends BaseHBDAOTests {
             final Citizen citizen = records.get(0);
             citizenDao.persist(citizen).join();
             final Citizen updatedCitizen = new Citizen(citizen.getCountryCode(), citizen.getUid(), citizen.getName(), (short) (citizen.getAge() + 1), citizen.getSal(), citizen.isPassportHolder(), citizen.getF1(), citizen.getF2(), citizen.getF3(), citizen.getF4(), citizen.getPincode(), citizen.getPhoneNumber(), citizen.getExtraFlags(), citizen.getDependents(), citizen.getEmergencyContacts2());
-            assertTrue(citizenDao.persistWhenFieldEquals(updatedCitizen, "name").join());
-            assertFalse(citizenDao.persistWhenFieldEquals(citizen, "age").join());
+            assertTrue(citizenDao.persistWhenFieldEquals(updatedCitizen, "name", updatedCitizen.getName()).join());
+            assertFalse(citizenDao.persistWhenFieldEquals(citizen, "age", citizen.getAge()).join());
         } finally {
             deleteTables(Citizen.class, CitizenSummary.class);
         }

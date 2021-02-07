@@ -206,6 +206,13 @@ class TestsAbstractHBDAO extends BaseHBDAOTests {
             citizenDao.delete(new String[]{rowKey3, rowKey4});
             assertNull(citizenDao.get(rowKey3), "Record was not deleted when deleted by 'array of row keys': " + rowKey3);
             assertNull(citizenDao.get(rowKey4), "Record was not deleted when deleted by 'array of row keys': " + rowKey4);
+
+            // Test conditional put
+            final Citizen citizen = records.get(0);
+            citizenDao.persist(citizen);
+            final Citizen updatedCitizen = new Citizen(citizen.getCountryCode(), citizen.getUid(), citizen.getName(), (short) (citizen.getAge() + 1), citizen.getSal(), citizen.isPassportHolder(), citizen.getF1(), citizen.getF2(), citizen.getF3(), citizen.getF4(), citizen.getPincode(), citizen.getPhoneNumber(), citizen.getExtraFlags(), citizen.getDependents(), citizen.getEmergencyContacts2());
+            assertTrue(citizenDao.persistWhenFieldEquals(updatedCitizen, "name", updatedCitizen.getName()));
+            assertFalse(citizenDao.persistWhenFieldEquals(citizen, "age", citizen.getAge()));
         } finally {
             deleteTables(Citizen.class, CitizenSummary.class);
         }

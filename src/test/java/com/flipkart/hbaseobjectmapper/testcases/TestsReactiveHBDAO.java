@@ -3,20 +3,8 @@ package com.flipkart.hbaseobjectmapper.testcases;
 import com.flipkart.hbaseobjectmapper.HBAdmin;
 import com.flipkart.hbaseobjectmapper.Records;
 import com.flipkart.hbaseobjectmapper.WrappedHBColumnTC;
-import com.flipkart.hbaseobjectmapper.testcases.daos.reactive.CitizenDAO;
-import com.flipkart.hbaseobjectmapper.testcases.daos.reactive.CitizenSummaryDAO;
-import com.flipkart.hbaseobjectmapper.testcases.daos.reactive.CounterDAO;
-import com.flipkart.hbaseobjectmapper.testcases.daos.reactive.CrawlDAO;
-import com.flipkart.hbaseobjectmapper.testcases.daos.reactive.CrawlNoVersionDAO;
-import com.flipkart.hbaseobjectmapper.testcases.daos.reactive.EmployeeDAO;
-import com.flipkart.hbaseobjectmapper.testcases.entities.Citizen;
-import com.flipkart.hbaseobjectmapper.testcases.entities.CitizenSummary;
-import com.flipkart.hbaseobjectmapper.testcases.entities.Contact;
-import com.flipkart.hbaseobjectmapper.testcases.entities.Counter;
-import com.flipkart.hbaseobjectmapper.testcases.entities.Crawl;
-import com.flipkart.hbaseobjectmapper.testcases.entities.CrawlNoVersion;
-import com.flipkart.hbaseobjectmapper.testcases.entities.Dependents;
-import com.flipkart.hbaseobjectmapper.testcases.entities.Employee;
+import com.flipkart.hbaseobjectmapper.testcases.daos.reactive.*;
+import com.flipkart.hbaseobjectmapper.testcases.entities.*;
 import com.flipkart.hbaseobjectmapper.testcases.util.cluster.InMemoryHBaseCluster;
 import com.flipkart.hbaseobjectmapper.testcases.util.cluster.RealHBaseCluster;
 
@@ -32,30 +20,12 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-import static com.flipkart.hbaseobjectmapper.testcases.util.LiteralsUtil.a;
-import static com.flipkart.hbaseobjectmapper.testcases.util.LiteralsUtil.e;
-import static com.flipkart.hbaseobjectmapper.testcases.util.LiteralsUtil.l;
-import static com.flipkart.hbaseobjectmapper.testcases.util.LiteralsUtil.m;
-import static com.flipkart.hbaseobjectmapper.testcases.util.LiteralsUtil.nm;
-import static com.flipkart.hbaseobjectmapper.testcases.util.LiteralsUtil.s;
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static com.flipkart.hbaseobjectmapper.testcases.util.LiteralsUtil.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 // TODO: fix the tests. Currently, the tests are copied from the sync DAO as-is, but is not idiomatic with real reactive client usage.
 class TestsReactiveHBDAO extends BaseHBDAOTests {
@@ -236,6 +206,13 @@ class TestsReactiveHBDAO extends BaseHBDAOTests {
             citizenDao.delete(new String[]{rowKey3, rowKey4}).map(CompletableFuture::join).forEach(System.out::println);
             assertNull(citizenDao.get(rowKey3).join(), "Record was not deleted when deleted by 'array of row keys': " + rowKey3);
             assertNull(citizenDao.get(rowKey4).join(), "Record was not deleted when deleted by 'array of row keys': " + rowKey4);
+
+            // Test conditional put
+            final Citizen citizen = records.get(0);
+            citizenDao.persist(citizen).join();
+            final Citizen updatedCitizen = new Citizen(citizen.getCountryCode(), citizen.getUid(), citizen.getName(), (short) (citizen.getAge() + 1), citizen.getSal(), citizen.isPassportHolder(), citizen.getF1(), citizen.getF2(), citizen.getF3(), citizen.getF4(), citizen.getPincode(), citizen.getPhoneNumber(), citizen.getExtraFlags(), citizen.getDependents(), citizen.getEmergencyContacts2());
+            assertTrue(citizenDao.persistWhenFieldEquals(updatedCitizen, "name", updatedCitizen.getName()).join());
+            assertFalse(citizenDao.persistWhenFieldEquals(citizen, "age", citizen.getAge()).join());
         } finally {
             deleteTables(Citizen.class, CitizenSummary.class);
         }

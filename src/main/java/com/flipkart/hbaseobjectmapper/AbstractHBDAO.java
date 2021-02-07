@@ -2,6 +2,7 @@ package com.flipkart.hbaseobjectmapper;
 
 import com.flipkart.hbaseobjectmapper.codec.Codec;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -15,13 +16,16 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.util.Bytes;
 
 import javax.annotation.concurrent.ThreadSafe;
 import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
+import java.lang.reflect.Type;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -591,6 +595,29 @@ public abstract class AbstractHBDAO<R extends Serializable & Comparable<R>, T ex
         try (Table table = getHBaseTable()) {
             table.put(put);
             return record.composeRowKey();
+        }
+    }
+
+    /**
+     * Persist your bean-like object only when the specified field carries the exact
+     * value specified in the bean in HBase.
+     *
+     * @param record Object that needs to be persisted
+     * @param fieldName Field name that must be equal
+     * @param expectedFieldValue The expected value the field must carry
+     * @return true when the field value was equal &amp; object was persisted, false otherwise
+     * @throws IOException on error
+     */
+    public boolean persistWhenFieldEquals(final T record, final String fieldName, final Serializable expectedFieldValue) throws IOException {
+        final Put put = hbObjectMapper.writeValueAsPut0(record);
+        try (Table table = getHBaseTable()) {
+            final Field field = getField(fieldName);
+            final WrappedHBColumn hbColumn = new WrappedHBColumn(field);
+            final byte[] expectedValue = hbObjectMapper.valueToByteArray(expectedFieldValue, hbColumn.codecFlags());
+            return table.checkAndMutate(put.getRow(), hbColumn.familyBytes())
+                    .qualifier(hbColumn.columnBytes())
+                    .ifEquals(expectedValue)
+                    .thenPut(put);
         }
     }
 

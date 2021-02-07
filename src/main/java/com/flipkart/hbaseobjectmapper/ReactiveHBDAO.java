@@ -508,6 +508,28 @@ public abstract class ReactiveHBDAO<R extends Serializable & Comparable<R>, T ex
     }
 
     /**
+     * Persist your bean-like object only when the specified field carries the exact
+     * value specified in the bean in HBase.
+     *
+     * @param record Object that needs to be persisted
+     * @param fieldName Field name that must be equal
+     * @param expectedFieldValue The expected value the field must carry
+     * @return true when the field value was equal &amp; object was persisted, false otherwise
+     */
+    public CompletableFuture<Boolean> persistWhenFieldEquals(final T record, final String fieldName, final Serializable expectedFieldValue) {
+        final Put put = hbObjectMapper.writeValueAsPut0(record);
+        final Field field = getField(fieldName);
+        final WrappedHBColumn hbColumn = new WrappedHBColumn(field);
+        final byte[] expectedValue = hbObjectMapper.valueToByteArray(expectedFieldValue, hbColumn.codecFlags());
+
+        return getHBaseTable()
+                .checkAndMutate(put.getRow(), hbColumn.familyBytes())
+                .qualifier(hbColumn.columnBytes())
+                .ifEquals(expectedValue)
+                .thenPut(put);
+    }
+
+    /**
      * Persist a list of your bean-like objects (of a class that implements {@link HBRecord}) to HBase table (this is a bulk variant of {@link #persist(HBRecord)} method)
      *
      * @param records List of objects that needs to be persisted

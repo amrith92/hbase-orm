@@ -4,6 +4,7 @@ import com.flipkart.hbaseobjectmapper.codec.Codec;
 import com.flipkart.hbaseobjectmapper.exceptions.InvalidReadVersionsCountException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AdvancedScanResultConsumer;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.AsyncConnection;
@@ -20,6 +21,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 
 import javax.annotation.Nonnull;
+
 import java.io.IOException;
 import java.io.Serializable;
 import java.io.UncheckedIOException;
@@ -762,7 +764,13 @@ public abstract class ReactiveHBDAO<R extends Serializable & Comparable<R>, T ex
      * @return {@link AsyncTable} object
      */
     public AsyncTable<AdvancedScanResultConsumer> getHBaseTable() {
-        return connection.getTable(hbTable.getName());
+        final TableName name;
+        if (namespace != null) {
+            name = TableName.valueOf(namespace, hbTable.getName().getQualifier());
+        } else {
+            name = hbTable.getName();
+        }
+        return connection.getTable(name);
     }
 
     private Get getGet(final R rowKey, final int numVersionsToFetch) {

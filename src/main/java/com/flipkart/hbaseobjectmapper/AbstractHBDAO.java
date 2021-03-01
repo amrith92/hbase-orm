@@ -3,6 +3,7 @@ package com.flipkart.hbaseobjectmapper;
 import com.flipkart.hbaseobjectmapper.codec.Codec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -704,7 +705,13 @@ public abstract class AbstractHBDAO<R extends Serializable & Comparable<R>, T ex
      * @throws IOException When table reference couldn't be resolved through connection
      */
     public Table getHBaseTable() throws IOException {
-        return connection.getTable(hbTable.getName());
+        final TableName tableName;
+        if (namespace != null) {
+            tableName = TableName.valueOf(namespace, hbTable.getName().getQualifier());
+        } else {
+            tableName = hbTable.getName();
+        }
+        return connection.getTable(tableName);
     }
 
     /**

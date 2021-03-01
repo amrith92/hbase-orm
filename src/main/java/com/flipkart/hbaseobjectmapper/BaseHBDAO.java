@@ -3,16 +3,19 @@ package com.flipkart.hbaseobjectmapper;
 import com.google.common.reflect.TypeToken;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Result;
 
 import javax.annotation.Nonnull;
+
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +36,7 @@ abstract class BaseHBDAO<R extends Serializable & Comparable<R>, T extends HBRec
     protected final Class<T> hbRecordClass;
     protected final WrappedHBTable<R, T> hbTable;
     private final Map<String, Field> fields;
+    protected byte[] namespace;
 
     @SuppressWarnings({"unchecked", "UnstableApiUsage"})
     protected BaseHBDAO(final HBObjectMapper hbObjectMapper) {
@@ -58,7 +62,11 @@ abstract class BaseHBDAO<R extends Serializable & Comparable<R>, T extends HBRec
      * @return Name of table read as String
      */
     public String getTableName() {
-        return hbRecordClass.getAnnotation(HBTable.class).name();
+        if (namespace != null) {
+            return String.format("%s:%s", new String(namespace, StandardCharsets.UTF_8), hbRecordClass.getAnnotation(HBTable.class).name());
+        } else {
+            return hbRecordClass.getAnnotation(HBTable.class).name();
+        }
     }
 
     /**
@@ -118,6 +126,17 @@ abstract class BaseHBDAO<R extends Serializable & Comparable<R>, T extends HBRec
      */
     public Append getAppend(R rowKey) {
         return new Append(toBytes(rowKey));
+    }
+
+    /**
+     * Overrides any annotated namespace for the record class.
+     *
+     * @param aNamespace a namespace
+     */
+    public void setNamespace(@Nonnull final String aNamespace) {
+        final byte[] namespaceBytes = aNamespace.getBytes(StandardCharsets.UTF_8);
+        TableName.isLegalNamespaceName(namespaceBytes);
+        this.namespace = namespaceBytes;
     }
 
     protected void populateFieldValuesToMap(final Field field, final Result result, final Map<R, NavigableMap<Long, Object>> map) {

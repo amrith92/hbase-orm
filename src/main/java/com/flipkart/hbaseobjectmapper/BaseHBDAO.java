@@ -8,6 +8,7 @@ import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.util.Bytes;
 
 import javax.annotation.Nonnull;
 
@@ -16,11 +17,13 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.function.Function;
 
@@ -31,6 +34,7 @@ import java.util.function.Function;
  * @param <T> Entity type that maps to an HBase row (this type must have implemented {@link HBRecord} interface)
  */
 abstract class BaseHBDAO<R extends Serializable & Comparable<R>, T extends HBRecord<R>> {
+    private static final byte[] MAX_BYTE_ARRAY = {Byte.MAX_VALUE};
     protected final HBObjectMapper hbObjectMapper;
     protected final Class<R> rowKeyClass;
     protected final Class<T> hbRecordClass;
@@ -139,19 +143,30 @@ abstract class BaseHBDAO<R extends Serializable & Comparable<R>, T extends HBRec
         this.namespace = namespaceBytes;
     }
 
+    @SuppressWarnings({"rawtypes", "unchecked"})
     protected void populateFieldValuesToMap(final Field field, final Result result, final Map<R, NavigableMap<Long, Object>> map) {
         if (result.isEmpty()) {
             return;
         }
         WrappedHBColumn hbColumn = new WrappedHBColumn(field);
-        List<Cell> cells = result.getColumnCells(hbColumn.familyBytes(), hbColumn.columnBytes());
-        for (Cell cell : cells) {
-            Type fieldType = hbObjectMapper.getFieldType(field, hbColumn.isMultiVersioned());
-            @SuppressWarnings("unchecked") final R rowKey = hbObjectMapper.bytesToRowKey(CellUtil.cloneRow(cell), hbTable.getCodecFlags(), (Class<T>) field.getDeclaringClass());
-            if (!map.containsKey(rowKey)) {
-                map.put(rowKey, new TreeMap<>());
+        if (hbColumn.isDynamic()) {
+            final List values = new ArrayList();
+            final SortedMap<byte[], byte[]> valueMap = result.getFamilyMap(hbColumn.familyBytes())
+                    .subMap(hbColumn.getPrefixBytes(), Bytes.add(hbColumn.getPrefixBytes(), MAX_BYTE_ARRAY));
+            valueMap.forEach((qualifier, v) -> values.add(hbObjectMapper.byteArrayToValue(v, hbColumn.getDynamicType(), hbColumn.codecFlags())));
+            if (!values.isEmpty()) {
+                final R rowKey = hbObjectMapper.bytesToRowKey(result.getRow(), hbTable.getCodecFlags(), (Class<T>) field.getDeclaringClass());
+                map.computeIfAbsent(rowKey, rk -> new TreeMap<>());
+                map.get(rowKey).put(result.getColumnLatestCell(hbColumn.familyBytes(), valueMap.firstKey()).getTimestamp(), values);
             }
-            map.get(rowKey).put(cell.getTimestamp(), hbObjectMapper.byteArrayToValue(CellUtil.cloneValue(cell), fieldType, hbColumn.codecFlags()));
+        } else {
+            List<Cell> cells = result.getColumnCells(hbColumn.familyBytes(), hbColumn.columnBytes());
+            for (Cell cell : cells) {
+                Type fieldType = hbObjectMapper.getFieldType(field, hbColumn.isMultiVersioned());
+                final R rowKey = hbObjectMapper.bytesToRowKey(CellUtil.cloneRow(cell), hbTable.getCodecFlags(), (Class<T>) field.getDeclaringClass());
+                map.computeIfAbsent(rowKey, rk -> new TreeMap<>());
+                map.get(rowKey).put(cell.getTimestamp(), hbObjectMapper.byteArrayToValue(CellUtil.cloneValue(cell), fieldType, hbColumn.codecFlags()));
+            }
         }
     }
 

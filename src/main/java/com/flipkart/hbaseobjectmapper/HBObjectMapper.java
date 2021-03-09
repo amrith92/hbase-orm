@@ -4,17 +4,58 @@ import com.flipkart.hbaseobjectmapper.codec.BestSuitCodec;
 import com.flipkart.hbaseobjectmapper.codec.Codec;
 import com.flipkart.hbaseobjectmapper.codec.exceptions.DeserializationException;
 import com.flipkart.hbaseobjectmapper.codec.exceptions.SerializationException;
+import com.flipkart.hbaseobjectmapper.exceptions.AllHBColumnFieldsNullException;
+import com.flipkart.hbaseobjectmapper.exceptions.BadHBaseLibStateException;
+import com.flipkart.hbaseobjectmapper.exceptions.CodecException;
+import com.flipkart.hbaseobjectmapper.exceptions.ColumnFamilyNotInHBTableException;
+import com.flipkart.hbaseobjectmapper.exceptions.ConversionFailedException;
+import com.flipkart.hbaseobjectmapper.exceptions.EmptyConstructorInaccessibleException;
+import com.flipkart.hbaseobjectmapper.exceptions.FieldAnnotatedWithHBColumnMultiVersionCantBeEmpty;
+import com.flipkart.hbaseobjectmapper.exceptions.FieldsMappedToSameColumnException;
+import com.flipkart.hbaseobjectmapper.exceptions.IncompatibleFieldForHBColumnMultiVersionAnnotationException;
 import com.flipkart.hbaseobjectmapper.exceptions.InternalError;
-import com.flipkart.hbaseobjectmapper.exceptions.*;
-import org.apache.hadoop.hbase.*;
+import com.flipkart.hbaseobjectmapper.exceptions.MappedColumnCantBePrimitiveException;
+import com.flipkart.hbaseobjectmapper.exceptions.MappedColumnCantBeStaticException;
+import com.flipkart.hbaseobjectmapper.exceptions.MappedColumnCantBeTransientException;
+import com.flipkart.hbaseobjectmapper.exceptions.MissingHBColumnFieldsException;
+import com.flipkart.hbaseobjectmapper.exceptions.NoEmptyConstructorException;
+import com.flipkart.hbaseobjectmapper.exceptions.ObjectNotInstantiatableException;
+import com.flipkart.hbaseobjectmapper.exceptions.RowKeyCantBeComposedException;
+import com.flipkart.hbaseobjectmapper.exceptions.RowKeyCantBeEmptyException;
+import com.flipkart.hbaseobjectmapper.exceptions.RowKeyCouldNotBeParsedException;
+import com.flipkart.hbaseobjectmapper.exceptions.UnsupportedFieldTypeException;
+
+import com.google.common.base.Preconditions;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilder;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import java.io.Serializable;
-import java.lang.reflect.*;
-import java.util.*;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 /**
  * <p>An <b>object mapper class</b> that helps<ol>
@@ -37,6 +78,7 @@ import java.util.*;
  */
 public class HBObjectMapper {
 
+    private static final byte[] BYTE_TERMINAL_VALUE = {Byte.MAX_VALUE};
     private final Codec codec;
 
     /**
@@ -105,24 +147,49 @@ public class HBObjectMapper {
         } catch (Exception ex) {
             throw new RowKeyCouldNotBeParsedException(String.format("Supplied row key \"%s\" could not be parsed", rowKey), ex);
         }
-        for (Field field : fields) {
+        for (final Field field : fields) {
             WrappedHBColumn hbColumn = new WrappedHBColumn(field);
             NavigableMap<byte[], NavigableMap<Long, byte[]>> familyMap = map.get(hbColumn.familyBytes());
             if (familyMap == null || familyMap.isEmpty()) {
                 continue;
             }
-            NavigableMap<Long, byte[]> columnVersionsMap = familyMap.get(hbColumn.columnBytes());
-            if (hbColumn.isSingleVersioned()) {
-                if (columnVersionsMap == null || columnVersionsMap.isEmpty()) {
-                    continue;
-                }
-                Map.Entry<Long, byte[]> firstEntry = columnVersionsMap.firstEntry();
-                objectSetFieldValue(record, field, firstEntry.getValue(), hbColumn.codecFlags());
+            if (hbColumn.isDynamic()) {
+                convertDynamicColumn(record, field, hbColumn, familyMap);
             } else {
-                objectSetFieldValue(record, field, columnVersionsMap, hbColumn.codecFlags());
+                convertStandardColumn(record, field, hbColumn, familyMap);
             }
         }
         return record;
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private <R extends Serializable & Comparable<R>, T extends HBRecord<R>> void convertDynamicColumn(final T record, final Field field, final WrappedHBColumn hbColumn, final NavigableMap<byte[], NavigableMap<Long, byte[]>> familyMap) {
+        final byte[] prefixBytes = hbColumn.getPrefixBytes();
+        final byte[] separatorBytes = hbColumn.getSeparatorBytes();
+        final byte[] dynamicPrefix = Bytes.add(prefixBytes, separatorBytes);
+        final byte[] dynamicPrefixMax = Bytes.add(dynamicPrefix, BYTE_TERMINAL_VALUE);
+        final SortedMap<byte[], NavigableMap<Long, byte[]>> subMap = familyMap.subMap(dynamicPrefix, dynamicPrefixMax);
+        if (subMap.size() > 0) {
+            final List values = new ArrayList(subMap.size());
+            for (final Map.Entry<byte[], NavigableMap<Long, byte[]>> entry : subMap.entrySet()) {
+                final Object value = byteArrayToValue(entry.getValue().firstEntry().getValue(), hbColumn.getDynamicType(), hbColumn.codecFlags());
+                values.add(value);
+            }
+            objectSetFieldValue(record, field, values);
+        }
+    }
+
+    private <R extends Serializable & Comparable<R>, T extends HBRecord<R>> void convertStandardColumn(final T record, final Field field, final WrappedHBColumn hbColumn, final NavigableMap<byte[], NavigableMap<Long, byte[]>> familyMap) {
+        NavigableMap<Long, byte[]> columnVersionsMap = familyMap.get(hbColumn.columnBytes());
+        if (hbColumn.isSingleVersioned()) {
+            if (columnVersionsMap == null || columnVersionsMap.isEmpty()) {
+                return;
+            }
+            Map.Entry<Long, byte[]> firstEntry = columnVersionsMap.firstEntry();
+            objectSetFieldValue(record, field, firstEntry.getValue(), hbColumn.codecFlags());
+        } else {
+            objectSetFieldValue(record, field, columnVersionsMap, hbColumn.codecFlags());
+        }
     }
 
     /**
@@ -259,39 +326,96 @@ public class HBObjectMapper {
         Collection<Field> fields = getHBColumnFields0(clazz).values();
         NavigableMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> map = new TreeMap<>(Bytes.BYTES_COMPARATOR);
         int numOfFieldsToWrite = 0;
-        for (Field field : fields) {
-            WrappedHBColumn hbColumn = new WrappedHBColumn(field);
+        for (final Field field : fields) {
+            final WrappedHBColumn hbColumn = new WrappedHBColumn(field);
             if (hbColumn.isSingleVersioned()) {
-                byte[] familyName = hbColumn.familyBytes(), columnName = hbColumn.columnBytes();
-                if (!map.containsKey(familyName)) {
-                    map.put(familyName, new TreeMap<>(Bytes.BYTES_COMPARATOR));
+                final byte[] familyName = hbColumn.familyBytes();
+                map.computeIfAbsent(familyName, f -> new TreeMap<>(Bytes.BYTES_COMPARATOR));
+                final Map<byte[], NavigableMap<Long, byte[]>> columns = map.get(familyName);
+                if (hbColumn.isDynamic()) {
+                    final Map<byte[], NavigableMap<Long, byte[]>> dynamicColumns = getDynamicColumns(record, field, hbColumn);
+                    columns.putAll(dynamicColumns);
+                    numOfFieldsToWrite += dynamicColumns.size();
+                } else {
+                    final byte[] columnName = hbColumn.columnBytes();
+                    final byte[] fieldValueBytes = getFieldValueAsBytes(record, field, hbColumn.codecFlags());
+                    if (fieldValueBytes != null && fieldValueBytes.length != 0) {
+                        NavigableMap<Long, byte[]> singleValue = new TreeMap<>();
+                        singleValue.put(HConstants.LATEST_TIMESTAMP, fieldValueBytes);
+                        columns.put(columnName, singleValue);
+                        numOfFieldsToWrite++;
+                    }
                 }
-                Map<byte[], NavigableMap<Long, byte[]>> columns = map.get(familyName);
-                final byte[] fieldValueBytes = getFieldValueAsBytes(record, field, hbColumn.codecFlags());
-                if (fieldValueBytes == null || fieldValueBytes.length == 0) {
-                    continue;
-                }
-                NavigableMap<Long, byte[]> singleValue = new TreeMap<>();
-                singleValue.put(HConstants.LATEST_TIMESTAMP, fieldValueBytes);
-                columns.put(columnName, singleValue);
-                numOfFieldsToWrite++;
             } else if (hbColumn.isMultiVersioned()) {
                 NavigableMap<Long, byte[]> fieldValueVersions = getFieldValuesAsNavigableMapOfBytes(record, field, hbColumn.codecFlags());
-                if (fieldValueVersions == null)
-                    continue;
-                byte[] familyName = hbColumn.familyBytes(), columnName = hbColumn.columnBytes();
-                if (!map.containsKey(familyName)) {
-                    map.put(familyName, new TreeMap<>(Bytes.BYTES_COMPARATOR));
+                if (fieldValueVersions != null) {
+                    final byte[] familyName = hbColumn.familyBytes();
+                    final byte[] columnName = hbColumn.columnBytes();
+                    map.computeIfAbsent(familyName, f -> new TreeMap<>(Bytes.BYTES_COMPARATOR));
+                    Map<byte[], NavigableMap<Long, byte[]>> columns = map.get(familyName);
+                    columns.put(columnName, fieldValueVersions);
+                    numOfFieldsToWrite++;
                 }
-                Map<byte[], NavigableMap<Long, byte[]>> columns = map.get(familyName);
-                columns.put(columnName, fieldValueVersions);
-                numOfFieldsToWrite++;
             }
         }
         if (numOfFieldsToWrite == 0) {
             throw new AllHBColumnFieldsNullException();
         }
         return map;
+    }
+
+    private <R extends Serializable & Comparable<R>, T extends HBRecord<R>> Map<byte[], NavigableMap<Long, byte[]>> getDynamicColumns(final T record, final Field field, final WrappedHBColumn hbColumn) {
+        try {
+            field.setAccessible(true);
+            @SuppressWarnings("rawtypes") final Collection value = (Collection) field.get(record);
+            if (value == null) {
+                return Collections.emptyMap();
+            }
+            return getDynamicColumns0(hbColumn, value);
+        } catch (IllegalAccessException e) {
+            throw new ConversionFailedException("Unable to handle dynamic column!", e);
+        }
+    }
+
+    Map<byte[], NavigableMap<Long, byte[]>> getDynamicColumns0(final WrappedHBColumn hbColumn, @SuppressWarnings("rawtypes") final Collection value) {
+        try {
+            final Map<byte[], NavigableMap<Long, byte[]>> columnValues = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+            final List<String> parts = Arrays.asList(hbColumn.getParts());
+            final byte[] qualifierSeparatorBytes = hbColumn.getQualifierSeparator().getBytes(StandardCharsets.UTF_8);
+            int valueIndex = 0;
+            for (final Object v : value) {
+                final Field[] declaredFields = v.getClass().getDeclaredFields();
+                Preconditions.checkArgument(parts.stream().allMatch(part -> Arrays.stream(declaredFields).anyMatch(f -> part.equals(f.getName()))), String.format("Specified parts %s do not exist in class %s!", parts, v.getClass()));
+                byte[] partValues = null;
+                for (final String part : parts) {
+                    final Field partField = v.getClass().getDeclaredField(part);
+                    partField.setAccessible(true);
+                    final Serializable partValue = (Serializable) partField.get(v);
+                    final byte[] serializedPartValue = valueToByteArray(partValue, hbColumn.codecFlags());
+                    if (partValues == null) {
+                        partValues = serializedPartValue;
+                    } else {
+                        partValues = Bytes.add(partValues, qualifierSeparatorBytes, serializedPartValue);
+                    }
+                }
+                if (partValues != null) {
+                    final byte[] prefix = hbColumn.getPrefixBytes();
+                    final byte[] separator = hbColumn.getSeparatorBytes();
+                    final byte[] columnName = hbColumn.shouldPreserveOrder()
+                            ? Bytes.add(prefix, separator, Bytes.add(Bytes.toBytes(valueIndex), separator, partValues))
+                            : Bytes.add(prefix, separator, partValues);
+                    final byte[] columnSingleValue = valueToByteArray((Serializable) v, hbColumn.codecFlags());
+                    final NavigableMap<Long, byte[]> singleValue = new TreeMap<>();
+                    singleValue.put(HConstants.LATEST_TIMESTAMP, columnSingleValue);
+                    columnValues.put(columnName, singleValue);
+                }
+
+                ++valueIndex;
+            }
+            return columnValues;
+        } catch (IllegalAccessException | NoSuchFieldException e) {
+            throw new ConversionFailedException("Unable to handle dynamic column!", e);
+        }
     }
 
     private <R extends Serializable & Comparable<R>, T extends HBRecord<R>> byte[] getFieldValueAsBytes(T record, Field field, Map<String, String> codecFlags) {
@@ -497,6 +621,15 @@ public class HBObjectMapper {
         }
     }
 
+    private void objectSetFieldValue(Object obj, Field field, Object value) {
+        try {
+            field.setAccessible(true);
+            field.set(obj, value);
+        } catch (IllegalAccessException e) {
+            throw new ConversionFailedException(String.format("Could not set value on field \"%s\" on instance of class %s", field.getName(), obj.getClass()), e);
+        }
+    }
+
     private void objectSetFieldValue(Object obj, Field field, byte[] value, Map<String, String> codecFlags) {
         if (value == null || value.length == 0)
             return;
@@ -550,9 +683,7 @@ public class HBObjectMapper {
         NavigableMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> map = new TreeMap<>(Bytes.BYTES_COMPARATOR);
         for (Map.Entry<byte[], List<Cell>> familyNameAndColumnValues : rawMap.entrySet()) {
             byte[] family = familyNameAndColumnValues.getKey();
-            if (!map.containsKey(family)) {
-                map.put(family, new TreeMap<>(Bytes.BYTES_COMPARATOR));
-            }
+            map.computeIfAbsent(family, f -> new TreeMap<>(Bytes.BYTES_COMPARATOR));
             List<Cell> cellList = familyNameAndColumnValues.getValue();
             for (Cell cell : cellList) {
                 byte[] column = CellUtil.cloneQualifier(cell);

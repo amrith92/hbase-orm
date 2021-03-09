@@ -17,6 +17,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.filter.ColumnPrefixFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import javax.annotation.concurrent.ThreadSafe;
@@ -28,6 +29,7 @@ import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -546,9 +548,15 @@ public abstract class AbstractHBDAO<R extends Serializable & Comparable<R>, T ex
                 throw new IllegalArgumentException(String.format("An attempt was made to append a value of type '%s' to field '%s', which is of type '%s' (incompatible)", value.getClass(), fieldName, field.getType()));
             }
             WrappedHBColumn hbColumn = new WrappedHBColumn(field);
-            append.addColumn(hbColumn.familyBytes(), hbColumn.columnBytes(),
-                    hbObjectMapper.valueToByteArray((Serializable) value, hbColumn.codecFlags())
-            );
+            if (hbColumn.isDynamic()) {
+                //noinspection rawtypes
+                hbObjectMapper.getDynamicColumns0(hbColumn, (Collection) value)
+                        .forEach((column, values) -> append.addColumn(hbColumn.familyBytes(), column, values.firstEntry().getValue()));
+            } else {
+                append.addColumn(hbColumn.familyBytes(), hbColumn.columnBytes(),
+                        hbObjectMapper.valueToByteArray((Serializable) value, hbColumn.codecFlags())
+                );
+            }
         }
         return append(append);
     }
@@ -776,7 +784,11 @@ public abstract class AbstractHBDAO<R extends Serializable & Comparable<R>, T ex
         Field field = getField(fieldName);
         WrappedHBColumn hbColumn = new WrappedHBColumn(field);
         Scan scan = new Scan().withStartRow(toBytes(startRowKey)).withStopRow(toBytes(endRowKey));
-        scan.addColumn(hbColumn.familyBytes(), hbColumn.columnBytes());
+        if (hbColumn.isDynamic()) {
+            scan.setFilter(new ColumnPrefixFilter(hbColumn.getPrefixBytes()));
+        } else {
+            scan.addColumn(hbColumn.familyBytes(), hbColumn.columnBytes());
+        }
         scan.readVersions(numVersionsToFetch);
         NavigableMap<R, NavigableMap<Long, Object>> map = new TreeMap<>();
         try (Table table = getHBaseTable();
@@ -817,7 +829,11 @@ public abstract class AbstractHBDAO<R extends Serializable & Comparable<R>, T ex
         for (R rowKey : rowKeys) {
             Get get = new Get(toBytes(rowKey));
             get.readVersions(numVersionsToFetch);
-            get.addColumn(hbColumn.familyBytes(), hbColumn.columnBytes());
+            if (hbColumn.isDynamic()) {
+                get.setFilter(new ColumnPrefixFilter(hbColumn.getPrefixBytes()));
+            } else {
+                get.addColumn(hbColumn.familyBytes(), hbColumn.columnBytes());
+            }
             gets.add(get);
         }
         Map<R, NavigableMap<Long, Object>> map = new LinkedHashMap<>(rowKeys.length, 1.0f);

@@ -1,12 +1,23 @@
 package com.flipkart.hbaseobjectmapper.testcases.entities;
 
-import com.flipkart.hbaseobjectmapper.*;
+import com.flipkart.hbaseobjectmapper.DynamicQualifier;
+import com.flipkart.hbaseobjectmapper.Family;
+import com.flipkart.hbaseobjectmapper.Flag;
+import com.flipkart.hbaseobjectmapper.HBColumn;
+import com.flipkart.hbaseobjectmapper.HBColumnMultiVersion;
+import com.flipkart.hbaseobjectmapper.HBDynamicColumn;
+import com.flipkart.hbaseobjectmapper.HBRecord;
+import com.flipkart.hbaseobjectmapper.HBTable;
 import com.flipkart.hbaseobjectmapper.codec.BestSuitCodec;
+
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
 import java.math.BigDecimal;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.NavigableMap;
 
 @SuppressWarnings("unused")
 @ToString
@@ -44,7 +55,7 @@ public class Citizen implements HBRecord<String> {
     private Map<String, Integer> extraFlags;
     @HBColumn(family = "optional", column = "dependents")
     private Dependents dependents; // Your own class
-    @HBColumn(family = "optional", column = "emergency_contacts_1")
+    @HBDynamicColumn(family = "optional", prefix = "ec", qualifier = @DynamicQualifier(parts = {"name"}), preserveOrder = true)
     private List<Contact> emergencyContacts1;
     @HBColumn(family = "optional", column = "emergency_contacts_2")
     private Map<String, Contact> emergencyContacts2;

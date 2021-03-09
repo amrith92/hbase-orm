@@ -24,7 +24,7 @@ public class TestHBObjectMapper {
             triple(new ClassWithNoEmptyConstructor(1), "Class with no empty constructor", NoEmptyConstructorException.class),
             triple(new ClassWithPrimitives(1f), "A class with primitives", MappedColumnCantBePrimitiveException.class),
             triple(new ClassWithTwoFieldsMappedToSameColumn(), "Class with two fields mapped to same column", FieldsMappedToSameColumnException.class),
-            triple(new ClassWithTwoHBColumnAnnotations(), String.format("Class with a field with two %s annotations", HBColumn.class.getSimpleName()), BothHBColumnAnnotationsPresentException.class),
+            triple(new ClassWithTwoHBColumnAnnotations(), String.format("Class with a field with two %s annotations", HBColumn.class.getSimpleName()), AmbiguousColumnDefinitionError.class),
             triple(new ClassWithBadAnnotationStatic(), "Class with a static field mapped to HBase column", MappedColumnCantBeStaticException.class),
             triple(new ClassWithDuplicateCodecFlagsForColumn(), "Class with duplicate codec flags for a field", DuplicateCodecFlagForColumnException.class),
             triple(new ClassWithDuplicateCodecFlagsForRowKey(), "Class with duplicate codec flags for its row key", DuplicateCodecFlagForRowKeyException.class),

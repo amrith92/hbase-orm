@@ -55,6 +55,9 @@ public class TestCodecs {
                         for (NavigableMap.Entry<Long, ?> entry : ((NavigableMap<Long, ?>) fieldValuesMap).entrySet()) {
                             verifyFieldSerDe(codec, objectClass.getSimpleName() + "." + fieldName, actualFieldType, (Serializable) entry.getValue(), toMap(field.getAnnotation(HBColumnMultiVersion.class).codecFlags()));
                         }
+                    } else if (field.isAnnotationPresent(HBDynamicColumn.class)) {
+                        Serializable fieldValue = (Serializable) field.get(record);
+                        verifyFieldSerDe(codec, objectClass.getSimpleName() + "." + fieldName, field.getGenericType(), fieldValue, toMap(field.getAnnotation(HBDynamicColumn.class).codecFlags()));
                     } else {
                         Serializable fieldValue = (Serializable) field.get(record);
                         verifyFieldSerDe(codec, objectClass.getSimpleName() + "." + fieldName, field.getGenericType(), fieldValue, toMap(field.getAnnotation(HBColumn.class).codecFlags()));

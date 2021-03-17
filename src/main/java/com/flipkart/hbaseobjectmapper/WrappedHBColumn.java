@@ -75,7 +75,7 @@ class WrappedHBColumn {
             separator = hbDynamicColumn.separator();
             separatorBytes = Bytes.toBytes(separator);
             parts = hbDynamicColumn.qualifier().parts();
-            column = String.join(separator, parts);
+            column = String.format("%s%s%s", prefix, separator, String.join(separator, parts));
             prefix = hbDynamicColumn.prefix();
             prefixBytes = Bytes.toBytes(prefix);
             shouldPreserveOrder = hbDynamicColumn.preserveOrder();

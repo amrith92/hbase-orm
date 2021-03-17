@@ -16,6 +16,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -48,12 +49,29 @@ class TestsAbstractHBDAO extends BaseHBDAOTests {
             hbAdmin = HBAdmin.create(connection);
             hbAdmin.createNamespace("govt");
             hbAdmin.createNamespace("corp");
+            hbAdmin.createNamespace("test");
         } catch (NumberFormatException e) {
             fail("The environmental variable " + InMemoryHBaseCluster.INMEMORY_CLUSTER_START_TIMEOUT + " is specified incorrectly (Must be numeric)");
         } catch (Exception e) {
             e.printStackTrace(System.err);
             fail(String.format("Failed to connect to HBase. Aborted execution of DAO-related test cases." +
                     "Reason:%n%s", e.getMessage()));
+        }
+    }
+
+    @Test
+    void testMultipleDynamicColumnDeclarationWithSameParts() throws Exception {
+        try {
+            createTables(QuirkyEntity.class);
+            QuirkyDAO dao = new QuirkyDAO(connection);
+            final QuirkyEntity record = new QuirkyEntity();
+            record.setId("1");
+            record.setKvs(Arrays.asList(new QuirkyEntity.KV("a", "1"), new QuirkyEntity.KV("b", "2")));
+            record.setKv2s(Arrays.asList(new QuirkyEntity.KV2("a", "1"), new QuirkyEntity.KV2("b", "2")));
+            final String key = dao.persist(record);
+            Assertions.assertEquals("1", key);
+        } finally {
+            deleteTables(QuirkyEntity.class);
         }
     }
 

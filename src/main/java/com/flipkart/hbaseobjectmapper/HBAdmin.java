@@ -21,6 +21,18 @@ public interface HBAdmin {
     void createNamespace(String namespace) throws IOException;
 
     /**
+     * Create table represented by the class in the specified namespace.
+     *
+     * @param aNamespace    A namespace
+     * @param hbRecordClass Class that represents the HBase table
+     * @param <R>           Data type of row key
+     * @param <T>           Entity type
+     * @throws IOException When HBase call fails
+     * @see Admin#createTable(TableDescriptor)
+     */
+    <R extends Serializable & Comparable<R>, T extends HBRecord<R>> void createTable(String aNamespace, Class<T> hbRecordClass) throws IOException;
+
+    /**
      * Create table represented by the class
      *
      * @param hbRecordClass Class that represents the HBase table
@@ -43,7 +55,19 @@ public interface HBAdmin {
     <R extends Serializable & Comparable<R>, T extends HBRecord<R>> void deleteTable(Class<T> hbRecordClass) throws IOException;
 
     /**
-     * Enable a
+     * Deletes HBase table
+     *
+     * @param aNamespace    a namespace
+     * @param hbRecordClass Class that represents the HBase table
+     * @param <R>           Data type of row key
+     * @param <T>           Entity type
+     * @throws IOException When HBase call fails
+     * @see Admin#deleteTable(TableName)
+     */
+    <R extends Serializable & Comparable<R>, T extends HBRecord<R>> void deleteTable(String aNamespace, Class<T> hbRecordClass) throws IOException;
+
+    /**
+     * Enable a table
      *
      * @param hbRecordClass Class that represents the HBase table
      * @param <R>           Data type of row key
@@ -52,6 +76,18 @@ public interface HBAdmin {
      * @see Admin#enableTable(TableName)
      */
     <R extends Serializable & Comparable<R>, T extends HBRecord<R>> void enableTable(Class<T> hbRecordClass) throws IOException;
+
+    /**
+     * Enable a table
+     *
+     * @param aNamespace    A namespace
+     * @param hbRecordClass Class that represents the HBase table
+     * @param <R>           Data type of row key
+     * @param <T>           Entity type
+     * @throws IOException When HBase call fails
+     * @see Admin#enableTable(TableName)
+     */
+    <R extends Serializable & Comparable<R>, T extends HBRecord<R>> void enableTable(String aNamespace, Class<T> hbRecordClass) throws IOException;
 
     /**
      * Disable a table
@@ -65,6 +101,18 @@ public interface HBAdmin {
     <R extends Serializable & Comparable<R>, T extends HBRecord<R>> void disableTable(Class<T> hbRecordClass) throws IOException;
 
     /**
+     * Disable a table
+     *
+     * @param aNamespace    a namespace
+     * @param hbRecordClass Class that represents the HBase table
+     * @param <R>           Data type of row key
+     * @param <T>           Entity type
+     * @throws IOException When HBase call fails
+     * @see Admin#disableTable(TableName)
+     */
+    <R extends Serializable & Comparable<R>, T extends HBRecord<R>> void disableTable(String aNamespace, Class<T> hbRecordClass) throws IOException;
+
+    /**
      * Checks whether table exists
      *
      * @param hbRecordClass Class that represents the HBase table
@@ -75,6 +123,19 @@ public interface HBAdmin {
      * @see Admin#tableExists(TableName)
      */
     <R extends Serializable & Comparable<R>, T extends HBRecord<R>> boolean tableExists(Class<T> hbRecordClass) throws IOException;
+
+    /**
+     * Checks whether table exists
+     *
+     * @param aNamespace    a namespace
+     * @param hbRecordClass Class that represents the HBase table
+     * @param <R>           Data type of row key
+     * @param <T>           Entity type
+     * @return <code>true</code> if table exists
+     * @throws IOException When HBase call fails
+     * @see Admin#tableExists(TableName)
+     */
+    <R extends Serializable & Comparable<R>, T extends HBRecord<R>> boolean tableExists(String aNamespace, Class<T> hbRecordClass) throws IOException;
 
     /**
      * Gets a HBAdmin instance given a connection.

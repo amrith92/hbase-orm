@@ -35,10 +35,10 @@ class SyncHBAdmin implements HBAdmin {
     }
 
     @Override
-    public <R extends Serializable & Comparable<R>, T extends HBRecord<R>> void createTable(Class<T> hbRecordClass) throws IOException {
+    public <R extends Serializable & Comparable<R>, T extends HBRecord<R>> void createTable(final String aNamespace, final Class<T> hbRecordClass) throws IOException {
         try (Admin admin = connection.getAdmin()) {
             WrappedHBTable<R, T> wrappedHBTable = new WrappedHBTable<>(hbRecordClass);
-            TableDescriptorBuilder tableDescriptorBuilder = TableDescriptorBuilder.newBuilder(wrappedHBTable.getName());
+            TableDescriptorBuilder tableDescriptorBuilder = TableDescriptorBuilder.newBuilder(wrappedHBTable.getName(aNamespace));
             for (Map.Entry<String, Integer> e : wrappedHBTable.getFamiliesAndVersions().entrySet()) {
                 tableDescriptorBuilder.setColumnFamily(
                         ColumnFamilyDescriptorBuilder.newBuilder(
@@ -50,34 +50,59 @@ class SyncHBAdmin implements HBAdmin {
     }
 
     @Override
+    public <R extends Serializable & Comparable<R>, T extends HBRecord<R>> void createTable(Class<T> hbRecordClass) throws IOException {
+        createTable(null, hbRecordClass);
+    }
+
+    @Override
     public <R extends Serializable & Comparable<R>, T extends HBRecord<R>> void deleteTable(Class<T> hbRecordClass) throws IOException {
+        deleteTable(null, hbRecordClass);
+    }
+
+    @Override
+    public <R extends Serializable & Comparable<R>, T extends HBRecord<R>> void deleteTable(final String aNamespace, final Class<T> hbRecordClass) throws IOException {
         try (Admin admin = connection.getAdmin()) {
             WrappedHBTable<R, T> wrappedHBTable = new WrappedHBTable<>(hbRecordClass);
-            admin.deleteTable(wrappedHBTable.getName());
+            admin.deleteTable(wrappedHBTable.getName(aNamespace));
         }
     }
 
     @Override
     public <R extends Serializable & Comparable<R>, T extends HBRecord<R>> void enableTable(Class<T> hbRecordClass) throws IOException {
+        enableTable(null, hbRecordClass);
+    }
+
+    @Override
+    public <R extends Serializable & Comparable<R>, T extends HBRecord<R>> void enableTable(final String aNamespace, final Class<T> hbRecordClass) throws IOException {
         try (Admin admin = connection.getAdmin()) {
             WrappedHBTable<R, T> wrappedHBTable = new WrappedHBTable<>(hbRecordClass);
-            admin.enableTable(wrappedHBTable.getName());
+            admin.enableTable(wrappedHBTable.getName(aNamespace));
         }
     }
 
     @Override
     public <R extends Serializable & Comparable<R>, T extends HBRecord<R>> void disableTable(Class<T> hbRecordClass) throws IOException {
+        disableTable(null, hbRecordClass);
+    }
+
+    @Override
+    public <R extends Serializable & Comparable<R>, T extends HBRecord<R>> void disableTable(final String aNamespace, final Class<T> hbRecordClass) throws IOException {
         try (Admin admin = connection.getAdmin()) {
             WrappedHBTable<R, T> wrappedHBTable = new WrappedHBTable<>(hbRecordClass);
-            admin.disableTable(wrappedHBTable.getName());
+            admin.disableTable(wrappedHBTable.getName(aNamespace));
         }
     }
 
     @Override
     public <R extends Serializable & Comparable<R>, T extends HBRecord<R>> boolean tableExists(Class<T> hbRecordClass) throws IOException {
+        return tableExists(null, hbRecordClass);
+    }
+
+    @Override
+    public <R extends Serializable & Comparable<R>, T extends HBRecord<R>> boolean tableExists(final String aNamespace, final Class<T> hbRecordClass) throws IOException {
         try (Admin admin = connection.getAdmin()) {
             WrappedHBTable<R, T> wrappedHBTable = new WrappedHBTable<>(hbRecordClass);
-            return admin.tableExists(wrappedHBTable.getName());
+            return admin.tableExists(wrappedHBTable.getName(aNamespace));
         }
     }
 

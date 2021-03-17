@@ -2,6 +2,7 @@ package com.flipkart.hbaseobjectmapper;
 
 import com.flipkart.hbaseobjectmapper.exceptions.DuplicateCodecFlagForRowKeyException;
 import com.flipkart.hbaseobjectmapper.exceptions.ImproperHBTableAnnotationExceptions;
+
 import org.apache.hadoop.hbase.TableName;
 
 import java.io.Serializable;
@@ -85,5 +86,13 @@ class WrappedHBTable<R extends Serializable & Comparable<R>, T extends HBRecord<
 
     static <R extends Serializable & Comparable<R>, T extends HBRecord<R>> Map<String, String> getCodecFlags(Class<T> clazz) {
         return new WrappedHBTable<>(clazz).codecFlags;
+    }
+
+    TableName getName(String aNamespaceOverride) {
+        if (aNamespaceOverride == null) {
+            return getName();
+        } else {
+            return TableName.valueOf(aNamespaceOverride, tableName.getQualifierAsString());
+        }
     }
 }

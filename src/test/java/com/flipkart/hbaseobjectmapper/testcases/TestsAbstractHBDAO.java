@@ -70,6 +70,8 @@ class TestsAbstractHBDAO extends BaseHBDAOTests {
             record.setKv2s(Arrays.asList(new QuirkyEntity.KV2("a", "1"), new QuirkyEntity.KV2("b", "2")));
             final String key = dao.persist(record);
             Assertions.assertEquals("1", key);
+            final QuirkyEntity result = dao.get("1");
+            Assertions.assertEquals(record, result);
         } finally {
             deleteTables(QuirkyEntity.class);
         }

@@ -11,6 +11,7 @@ import lombok.ToString;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Objects;
 
 @ToString
 @EqualsAndHashCode
@@ -85,6 +86,19 @@ public class QuirkyEntity implements HBRecord<String> {
         public void setValue(final String value) {
             this.value = value;
         }
+
+        @Override
+        public boolean equals(final Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            final KV kv = (KV) o;
+            return getKey().equals(kv.getKey()) && getValue().equals(kv.getValue());
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(getKey(), getValue());
+        }
     }
 
     public static class KV2 implements Serializable {
@@ -111,6 +125,19 @@ public class QuirkyEntity implements HBRecord<String> {
 
         public void setValue(final String value) {
             this.value = value;
+        }
+
+        @Override
+        public boolean equals(final Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            final KV2 kv2 = (KV2) o;
+            return getKey().equals(kv2.getKey()) && getValue().equals(kv2.getValue());
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(getKey(), getValue());
         }
     }
 }
